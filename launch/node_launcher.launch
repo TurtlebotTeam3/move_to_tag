@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="move_to_tag" type="move_to_tag.py" name="move_to_tag" output="screen"></node>
+</launch>
