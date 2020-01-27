@@ -16,3 +16,6 @@ while i < 2 and not rospy.is_shutdown():
     print "test"
     i = i + 1
     rate.sleep()
+
+#pub.publish(msg_str)
+#print "test"

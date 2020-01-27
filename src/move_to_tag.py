@@ -103,7 +103,7 @@ class MoveToTag:
 		if y != 0:
 			self.last_y = y
 		if self.blob_detected == False:
-			if self.last_y > 620: # and (self.last_x > (self.center_img - 100)) and (self.last_x < (self.center_img + 100)):
+			if self.last_y > 300: # and (self.last_x > (self.center_img - 100)) and (self.last_x < (self.center_img + 100)):
 				self.blob_lost_at_bottom = True
 			else: 
 				self.blob_lost_at_bottom = False
@@ -229,8 +229,8 @@ class MoveToTag:
 		#print "current y ->" + str(self.pose.position.y)
 		#print "current yaw -->" + str(self.robot_yaw)
 
-		next_x = self.pose.position.x + math.cos(self.robot_yaw) * 0.17
-		next_y = self.pose.position.y + math.sin(self.robot_yaw) * 0.17
+		next_x = self.pose.position.x + math.cos(self.robot_yaw) * 0.18
+		next_y = self.pose.position.y + math.sin(self.robot_yaw) * 0.18
 
 		#print "next x ->" + str(next_x)
 		#print "next y ->" + str(next_y)
