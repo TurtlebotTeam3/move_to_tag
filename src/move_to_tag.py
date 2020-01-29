@@ -262,15 +262,15 @@ class MoveToTag:
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _linear_vel(self):
-		return 0.03
+		return 0.1
 
 	def _angular_vel(self):	
 		if self.blob_x < ((self.center_img - self.center_tolerance) + 10):
 			# rotate robot to the left
-			return 0.075
+			return 0.15
 		elif self.blob_x > ((self.center_img + self.center_tolerance) - 10):
 			# rotate robot to the right
-			return -0.075
+			return -0.15
 
 if __name__ == '__main__':
 	try:
