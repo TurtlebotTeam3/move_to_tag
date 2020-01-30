@@ -122,7 +122,7 @@ class MoveToTag:
 		if y != 0:
 			self.last_y = y
 		if self.blob_detected == False:
-			if self.last_y > 300:
+			if self.last_y > 550:
 				self.blob_lost_at_bottom = True
 			else: 
 				self.blob_lost_at_bottom = False
@@ -245,8 +245,8 @@ class MoveToTag:
 
 	def _calculate_last_point(self):
 
-		next_x = self.pose.position.x + math.cos(self.robot_yaw) * 0.17
-		next_y = self.pose.position.y + math.sin(self.robot_yaw) * 0.17
+		next_x = self.pose.position.x + math.cos(self.robot_yaw) * 0.18
+		next_y = self.pose.position.y + math.sin(self.robot_yaw) * 0.18
 
 		self._move_last_distance(next_x, next_y)
 
@@ -262,15 +262,15 @@ class MoveToTag:
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _linear_vel(self):
-		return 0.03
+		return 0.075
 
 	def _angular_vel(self):	
 		if self.blob_x < ((self.center_img - self.center_tolerance) + 10):
 			# rotate robot to the left
-			return 0.075
+			return 0.1
 		elif self.blob_x > ((self.center_img + self.center_tolerance) - 10):
 			# rotate robot to the right
-			return -0.075
+			return -0.1
 
 if __name__ == '__main__':
 	try:
