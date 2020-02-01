@@ -3,16 +3,17 @@
 import rospy
 import numpy as np
 import math
-from std_msgs.msg import String
-from math import pow, atan2, sqrt
-from geometry_msgs.msg._Twist import Twist
-from geometry_msgs.msg._Pose import Pose
-from std_msgs.msg._Bool import Bool
-from sensor_msgs.msg._LaserScan import LaserScan
 import tf
+
+from std_msgs.msg import String, Bool
+from math import pow, atan2, sqrt
+from geometry_msgs.msg import Twist, Pose
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import OccupancyGrid, MapMetaData
+
 from simple_camera.msg import Blob
 from tag_manager.srv import AddTag
-from nav_msgs.msg._OccupancyGrid import OccupancyGrid
+from simple_odom.msg import PoseConverted, CustomPose
 
 class MoveToTag:
 
@@ -24,6 +25,7 @@ class MoveToTag:
 		self.blob_x = 0
 		self.blob_y = 0
 		self.blob_detected = False
+
 		self.center_img = 620
 		self.center_tolerance = 50
 		self.start_driving = False
@@ -31,20 +33,19 @@ class MoveToTag:
 		self.standing_on_tag = False
 		self.blob_lost_at_bottom = False
 		self.stop = False
-		self.pose = Pose()
+		
 		self.rate = rospy.Rate(20)
 		self.obstacle = False
 		self.last_x = 0
 		self.last_y = 0
-		self.map_resolution = 0
-		self.map_offset_x = 0
-		self.map_offset_y = 0
-		self.received_map = False
+
+		self.map_info = MapMetaData()
+
+		self.pose = Pose()
+		self.pose_converted = PoseConverted()
 
 		# Subscriber
-		self.mapSub = rospy.Subscriber('/map', OccupancyGrid, self._map_callback)
-
-		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', Pose, self._update_pose)
+		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', CustomPose, self._handle_update_pose)
 
 		self.scanSub = rospy.Subscriber('/scan', LaserScan, self._scan_callback)
 
@@ -69,6 +70,8 @@ class MoveToTag:
 		print "--- wait for add_tag service"
 		self.tag_manager_add = rospy.ServiceProxy('add_tag', AddTag)
 		print "--- add_tag service ready"
+		
+		self._setup()
 
 		print('--- ready ---')
 		rospy.spin()
@@ -87,11 +90,10 @@ class MoveToTag:
 		self.velocity_publisher.publish(vel_msg)
 		self.rate.sleep()
 
-	def _map_callback(self, data):
-		self.map_resolution = data.info.resolution
-		self.map_offset_x = data.info.origin.position.x
-		self.map_offset_y = data.info.origin.position.y
-		self.received_map = True
+	def _setup(self):
+		map = rospy.wait_for_message('/map', OccupancyGrid)
+		self.map_info = map.info
+
 
 	def _goal_reached_callback(self, reached):
 		if self.driving_to_tag == True:
@@ -99,8 +101,8 @@ class MoveToTag:
 				self.driving_to_tag = False
 				self.standing_on_tag = True
 				#save tag in tag manager
-				robo_x_in_map = int(math.floor((self.pose.position.x - self.map_offset_x)/self.map_resolution))
-				robo_y_in_map = int(math.floor((self.pose.position.y - self.map_offset_y)/self.map_resolution))
+				robo_x_in_map = int(math.floor((self.pose_converted.x - self.map_info.origin.position.x)/self.map_info.resolution))
+				robo_y_in_map = int(math.floor((self.pose_converted.y - self.map_info.origin.position.y)/self.map_info.resolution))
 				add_service_response = self.tag_manager_add(robo_x_in_map,robo_y_in_map)
 				print "--> reached tag and added"
 				print str(add_service_response)
@@ -142,34 +144,17 @@ class MoveToTag:
 		else:
 			self.obstacle = False
 
-	def _update_pose(self, data):
+	def _handle_update_pose(self, data):
 		"""
 		Update current pose of robot
 		"""
 		try:
-			self.pose.position.x = data.position.x
-			self.pose.position.y = data.position.y
-			self.pose.position.z = data.position.z
-			self.pose.orientation.x = data.orientation.x 
-			self.pose.orientation.y = data.orientation.y 
-			self.pose.orientation.z = data.orientation.z
-			self.pose.orientation.w = data.orientation.w 
+			self.pose = data.pose
+			self.pose_converted = data.pose_converted
 		except:
 			print "ERROR --> TRANSFORM NOT READY"
-		
-		self.pose.position.x = round(data.position.x, 4)
-		self.pose.position.y = round(data.position.y, 4)
-		self.robot_yaw = self._robot_angle()
-		
-
-	def _robot_angle(self):
-		orientation_q = self.pose.orientation
-		orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-		(_, _, yaw) = tf.transformations.euler_from_quaternion(orientation_list)
-		return yaw
 
 	def _move_to_tag(self, start_driving_bool):
-
 		if start_driving_bool.data == True and self.blob_detected == True:
 			self.start_driving = start_driving_bool.data
 			print('--> drive to tag')
@@ -245,9 +230,8 @@ class MoveToTag:
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _calculate_last_point(self):
-
-		next_x = self.pose.position.x + math.cos(self.robot_yaw) * 0.175
-		next_y = self.pose.position.y + math.sin(self.robot_yaw) * 0.175
+		next_x = self.pose_converted.x + math.cos(self.pose_converted.yaw) * 0.175
+		next_y = self.pose_converted.y + math.sin(self.pose_converted.yaw) * 0.175
 
 		self._move_last_distance(next_x, next_y)
 
