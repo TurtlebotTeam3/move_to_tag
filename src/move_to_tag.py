@@ -101,9 +101,7 @@ class MoveToTag:
 				self.driving_to_tag = False
 				self.standing_on_tag = True
 				#save tag in tag manager
-				robo_x_in_map = int(math.floor((self.pose_converted.x - self.map_info.origin.position.x)/self.map_info.resolution))
-				robo_y_in_map = int(math.floor((self.pose_converted.y - self.map_info.origin.position.y)/self.map_info.resolution))
-				add_service_response = self.tag_manager_add(robo_x_in_map,robo_y_in_map)
+				add_service_response = self.tag_manager_add(self.pose_converted.x,self.pose_converted.y)
 				print "--> reached tag and added"
 				print str(add_service_response)
 				#TODO stop blob detection
@@ -230,8 +228,8 @@ class MoveToTag:
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _calculate_last_point(self):
-		next_x = self.pose_converted.x + math.cos(self.pose_converted.yaw) * 0.175
-		next_y = self.pose_converted.y + math.sin(self.pose_converted.yaw) * 0.175
+		next_x = round(self.pose.position.x, 4) + math.cos(self.pose_converted.yaw) * 0.175
+		next_y = round(self.pose.position.y, 4) + math.sin(self.pose_converted.yaw) * 0.175
 
 		self._move_last_distance(next_x, next_y)
 
