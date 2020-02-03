@@ -18,10 +18,10 @@ from simple_odom.msg import PoseConverted, CustomPose
 class MoveToTag:
 
 	def __init__(self):
-		rospy.on_shutdown(self._shutdown)
 		rospy.init_node('move_to_tag')
+		rospy.loginfo('Move to Tag node started')
+		rospy.on_shutdown(self._shutdown)
 
-		#parameters checked
 		self.blob_x = 0
 		self.blob_y = 0
 		self.blob_detected = False
@@ -44,35 +44,29 @@ class MoveToTag:
 		self.pose = Pose()
 		self.pose_converted = PoseConverted()
 
-		# Subscriber
-		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', CustomPose, self._handle_update_pose)
-
-		self.scanSub = rospy.Subscriber('/scan', LaserScan, self._scan_callback)
-
-		self.camera_subscriber = rospy.Subscriber('/blob', Blob, self._cameraBlob_callback)
-
-		self.start_driving_subscriber = rospy.Subscriber('/move_to_tag_start_driving', Bool, self._move_to_tag)
-
-		self.sub_goal_reached = rospy.Subscriber('/move_to_goal/reached', Bool, self._goal_reached_callback)
-
-		# Publisher
-
+		print("--- publisher ---")
+        # --- Publishers ---
 		self.velocity_publisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
-
-		self.pub_goal = rospy.Publisher('move_to_goal/goal', Pose, queue_size=1)
-
-		self.move_to_goal_cansel = rospy.Publisher('move_to_goal/cancel', Bool, queue_size=1)
-
-		#stop move to goal
+		self.move_to_goal_publisher = rospy.Publisher('move_to_goal/goal', Pose, queue_size=1)
 		self.stop_move_to_goal_publisher = rospy.Publisher('move_to_goal/pause_action', Bool, queue_size=1)
 
+		print("--- subscriber ---")
+        # --- Subscribers ---
+		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', CustomPose, self._handle_update_pose)
+		self.scan_subscriber = rospy.Subscriber('/scan', LaserScan, self._scan_callback)
+		self.camera_subscriber = rospy.Subscriber('/blob', Blob, self._camera_blob_callback)
+		self.start_driving_subscriber = rospy.Subscriber('/move_to_tag_start_driving', Bool, self._move_to_tag)
+		self.goal_reached_subscriber = rospy.Subscriber('/move_to_goal/reached', Bool, self._goal_reached_callback)
+
+		print("--- service wait ---")
+        # --- Service wait ---
+		print("1")
 		rospy.wait_for_service('add_tag')
-		print "--- wait for add_tag service"
-		self.tag_manager_add = rospy.ServiceProxy('add_tag', AddTag)
-		print "--- add_tag service ready"
+
+		print("--- services ---")
+		self.tag_manager_add_service = rospy.ServiceProxy('add_tag', AddTag)
 		
 		self._setup()
-
 		print('--- ready ---')
 		rospy.spin()
 
@@ -94,30 +88,37 @@ class MoveToTag:
 		map = rospy.wait_for_message('/map', OccupancyGrid)
 		self.map_info = map.info
 
-
 	def _goal_reached_callback(self, reached):
+		"""
+		Callback if Move_to_Goal reaches the
+		last distance and is standing on the tag
+		"""
 		if self.driving_to_tag == True:
 			if reached:
 				self.driving_to_tag = False
 				self.standing_on_tag = True
-				#save tag in tag manager
-				add_service_response = self.tag_manager_add(self.pose_converted.x,self.pose_converted.y)
+				add_service_response = self.tag_manager_add_service(self.pose_converted.x,self.pose_converted.y)
 				print "--> reached tag and added"
-				print str(add_service_response)
-				#TODO stop blob detection
 			else:
 				self.driving_to_tag = False
 				self.standing_on_tag = False
 				self.stop_move_to_goal_publisher.publish(False)
 				print "ERROR --> MOVE GOAL ERROR"
 
-	def _cameraBlob_callback(self,blob):
+	def _camera_blob_callback(self,blob):
+		"""
+		Blob callback
+		"""
 		self.blob_detected = blob.blob_detected
 		self.blob_x = blob.blob_x
 		self.blob_y = blob.blob_y
 		self._check_if_blob_lost_bottom(self.blob_x,self.blob_y)
 
 	def _check_if_blob_lost_bottom(self, x, y):
+		"""
+		Funktion to check if the blob is lost
+		in the lower half of the picture
+		"""
 		if x != 0:
 			self.last_x = x
 		if y != 0:
@@ -129,6 +130,9 @@ class MoveToTag:
 				self.blob_lost_at_bottom = False
 
 	def _scan_callback(self, scan):
+		"""
+		Lidar callback for Obstacle detection
+		"""
 		range_front = []
 		min_front = 0
 		# in front of the robot (between 20 to -20 degrees)
@@ -153,12 +157,15 @@ class MoveToTag:
 			print "ERROR --> TRANSFORM NOT READY"
 
 	def _move_to_tag(self, start_driving_bool):
+		"""
+		Center blob in the middle. Then drive straight ahead.
+		If the blob is lost in the lower half of the image, 
+		drive the last distance blind.
+		"""
 		if start_driving_bool.data == True and self.blob_detected == True:
 			self.start_driving = start_driving_bool.data
 			print('--> drive to tag')
-
 			vel_msg = Twist()
-
 			cancle = False
 
 			while self.stop == False and cancle == False and self.obstacle == False:
@@ -212,7 +219,6 @@ class MoveToTag:
 				# Publish at the desired rate.
 				self.rate.sleep()
 
-			print "--> end of move to tag"
 			vel_msg.linear.x = 0
 			vel_msg.linear.y = 0
 			vel_msg.linear.z = 0
@@ -228,12 +234,18 @@ class MoveToTag:
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _calculate_last_point(self):
+		"""
+		Calculate the last point
+		"""
 		next_x = round(self.pose.position.x, 4) + math.cos(self.pose_converted.yaw) * 0.175
 		next_y = round(self.pose.position.y, 4) + math.sin(self.pose_converted.yaw) * 0.175
 
 		self._move_last_distance(next_x, next_y)
 
 	def _move_last_distance(self, x, y):
+		"""
+		Drive the last distance to stand on the marker 
+		"""
 		print('--> navigate to: ' + str(x) + ' | ' + str(y))
 		goal = Pose()
 
@@ -241,13 +253,19 @@ class MoveToTag:
 		goal.position.y = y
 		goal.orientation.w = 1
 
-		self.pub_goal.publish(goal)
+		self.move_to_goal_publisher.publish(goal)
 		self.stop_move_to_goal_publisher.publish(False)
 
 	def _linear_vel(self):
+		"""
+		Set linar velocity
+		"""
 		return 0.075
 
-	def _angular_vel(self):	
+	def _angular_vel(self):
+		"""
+		Set angular velocity
+		"""	
 		if self.blob_x < ((self.center_img - self.center_tolerance) + 10):
 			# rotate robot to the left
 			return 0.1
