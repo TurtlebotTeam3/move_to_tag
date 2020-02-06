@@ -45,15 +45,15 @@ class MoveToTag:
 		self.pose_converted = PoseConverted()
 
 		# Subscriber
-		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', CustomPose, self._handle_update_pose)
+		self.pose_subscriber = rospy.Subscriber('simple_odom_pose', CustomPose, self._handle_update_pose)
 
-		self.scanSub = rospy.Subscriber('/scan', LaserScan, self._scan_callback)
+		self.scanSub = rospy.Subscriber('scan', LaserScan, self._scan_callback)
 
-		self.camera_subscriber = rospy.Subscriber('/blob', Blob, self._cameraBlob_callback)
+		self.camera_subscriber = rospy.Subscriber('blob', Blob, self._cameraBlob_callback)
 
-		self.start_driving_subscriber = rospy.Subscriber('/move_to_tag_start_driving', Bool, self._move_to_tag)
+		self.start_driving_subscriber = rospy.Subscriber('move_to_tag_start_driving', Bool, self._move_to_tag)
 
-		self.sub_goal_reached = rospy.Subscriber('/move_to_goal/reached', Bool, self._goal_reached_callback)
+		self.sub_goal_reached = rospy.Subscriber('move_to_goal/reached', Bool, self._goal_reached_callback)
 
 		# Publisher
 
@@ -91,7 +91,7 @@ class MoveToTag:
 		self.rate.sleep()
 
 	def _setup(self):
-		map = rospy.wait_for_message('/map', OccupancyGrid)
+		map = rospy.wait_for_message('map', OccupancyGrid)
 		self.map_info = map.info
 
 
