@@ -44,19 +44,6 @@ class MoveToTag:
 		self.pose = Pose()
 		self.pose_converted = PoseConverted()
 
-		# Subscriber
-		self.pose_subscriber = rospy.Subscriber('simple_odom_pose', CustomPose, self._handle_update_pose)
-
-		self.scanSub = rospy.Subscriber('scan', LaserScan, self._scan_callback)
-
-		self.camera_subscriber = rospy.Subscriber('blob', Blob, self._camera_blob_callback)
-
-		self.start_driving_subscriber = rospy.Subscriber('move_to_tag_start_driving', Bool, self._move_to_tag)
-
-		self.sub_goal_reached = rospy.Subscriber('move_to_goal/reached', Bool, self._goal_reached_callback)
-
-		# Publisher
-
 		print("--- publisher ---")
         # --- Publishers ---
 		self.velocity_publisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
@@ -65,11 +52,11 @@ class MoveToTag:
 
 		print("--- subscriber ---")
         # --- Subscribers ---
-		self.pose_subscriber = rospy.Subscriber('/simple_odom_pose', CustomPose, self._handle_update_pose)
-		self.scan_subscriber = rospy.Subscriber('/scan', LaserScan, self._scan_callback)
-		self.camera_subscriber = rospy.Subscriber('/blob', Blob, self._camera_blob_callback)
-		self.start_driving_subscriber = rospy.Subscriber('/move_to_tag_start_driving', Bool, self._move_to_tag)
-		self.goal_reached_subscriber = rospy.Subscriber('/move_to_goal/reached', Bool, self._goal_reached_callback)
+		self.pose_subscriber = rospy.Subscriber('simple_odom_pose', CustomPose, self._handle_update_pose)
+		self.scan_subscriber = rospy.Subscriber('scan', LaserScan, self._scan_callback)
+		self.camera_subscriber = rospy.Subscriber('blob', Blob, self._camera_blob_callback)
+		self.start_driving_subscriber = rospy.Subscriber('move_to_tag_start_driving', Bool, self._move_to_tag)
+		self.goal_reached_subscriber = rospy.Subscriber('move_to_goal/reached', Bool, self._goal_reached_callback)
 
 		print("--- service wait ---")
         # --- Service wait ---
