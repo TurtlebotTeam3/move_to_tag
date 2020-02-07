@@ -140,7 +140,7 @@ class MoveToTag:
 		range_front[20:] = scan.ranges[:20]
 		range_front = list(filter(lambda num: num != 0, range_front))
 		min_front = min(range_front)
-		if min_front < 0.18 and min_front != 0.0:
+		if min_front < 0.25 and min_front != 0.0:
 			self.stop_move_to_goal_publisher.publish(False)
 			self.obstacle = True
 		else:
@@ -183,14 +183,14 @@ class MoveToTag:
 				vel_msg.angular.y = 0
 				vel_msg.angular.z = 0
 
-				if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
-					(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
-					print('--> rotate')
-					vel_msg.angular.z = self._angular_vel()
-					vel_msg.linear.x = 0.015
-				else:
-					if not self.obstacle:
-						if self.blob_detected == True:
+				
+				if not self.obstacle:
+						if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
+								(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
+								print('--> rotate')
+								vel_msg.angular.z = self._angular_vel()
+								vel_msg.linear.x = 0.015
+						elif self.blob_detected == True:
 							print('--> forward')
 							vel_msg.linear.x = self._linear_vel()
 						else:
@@ -204,14 +204,14 @@ class MoveToTag:
 								self.driving_to_tag = False
 								self.standing_on_tag = False
 								self.stop_move_to_goal_publisher.publish(False)
-					else:
-						cancle = True
-						self.driving_to_tag = False
-						self.standing_on_tag = False
-						vel_msg.linear.x = 0
-						vel_msg.angular.z = 0
-						self.velocity_publisher.publish(vel_msg)
-						self.stop_move_to_goal_publisher.publish(False)
+				else:
+					cancle = True
+					self.driving_to_tag = False
+					self.standing_on_tag = False
+					vel_msg.linear.x = 0
+					vel_msg.angular.z = 0
+					self.velocity_publisher.publish(vel_msg)
+					self.stop_move_to_goal_publisher.publish(False)
 
 				# Publishing our vel_msg
 				self.velocity_publisher.publish(vel_msg)
