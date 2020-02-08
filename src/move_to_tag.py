@@ -49,6 +49,7 @@ class MoveToTag:
 		self.velocity_publisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
 		self.move_to_goal_publisher = rospy.Publisher('move_to_goal/goal', Pose, queue_size=1)
 		self.stop_move_to_goal_publisher = rospy.Publisher('move_to_goal/pause_action', Bool, queue_size=1)
+		self.move_to_tag_reached_publisher = rospy.Publisher('move_to_tag/reached', Bool, queue_size=1)
 
 		print("--- subscriber ---")
         # --- Subscribers ---
@@ -98,6 +99,7 @@ class MoveToTag:
 				self.driving_to_tag = False
 				self.standing_on_tag = True
 				add_service_response = self.tag_manager_add_service(self.pose_converted.x,self.pose_converted.y)
+				self.move_to_tag_reached_publisher.publish(True)
 				print "--> reached tag and added"
 			else:
 				self.driving_to_tag = False
