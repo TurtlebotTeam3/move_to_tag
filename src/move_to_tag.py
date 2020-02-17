@@ -189,11 +189,11 @@ class MoveToTag:
 				if not self.obstacle:
 						if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
 								(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
-								rospy.loginfo('--> rotate')
+								#rospy.loginfo('--> rotate')
 								vel_msg.angular.z = self._angular_vel()
 								vel_msg.linear.x = 0.015
 						elif self.blob_detected == True:
-							rospy.loginfo('--> forward')
+							#rospy.loginfo('--> forward')
 							vel_msg.linear.x = self._linear_vel()
 						else:
 							if self.blob_lost_at_bottom == True:
