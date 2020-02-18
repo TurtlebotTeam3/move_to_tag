@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 import math
 import tf
+import time
 
 from std_msgs.msg import String, Bool
 from math import pow, atan2, sqrt
@@ -66,7 +67,9 @@ class MoveToTag:
 
 		rospy.loginfo("--- services ---")
 		self.tag_manager_add_service = rospy.ServiceProxy('add_tag', AddTag)
-		
+
+		self.last_pose_time = None
+
 		self._setup()
 		rospy.loginfo('--- ready ---')
 		rospy.spin()
@@ -153,6 +156,8 @@ class MoveToTag:
 		Update current pose of robot
 		"""
 		try:
+			self.last_pose_time = int(round(time.time() * 1000))
+
 			self.pose = data.pose
 			self.pose_converted = data.pose_converted
 		except:
@@ -187,25 +192,32 @@ class MoveToTag:
 
 				
 				if not self.obstacle:
-						if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
-								(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
-								#rospy.loginfo('--> rotate')
-								vel_msg.angular.z = self._angular_vel()
-								vel_msg.linear.x = 0.015
-						elif self.blob_detected == True:
-							#rospy.loginfo('--> forward')
-							vel_msg.linear.x = self._linear_vel()
+						current_time_ms = int(round(time.time() * 1000))
+
+						if self.last_pose_time != None and (current_time_ms - self.last_pose_time) < 50:
+							if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
+									(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
+									#rospy.loginfo('--> rotate')
+									vel_msg.angular.z = self._angular_vel()
+									vel_msg.linear.x = 0.015
+							elif self.blob_detected == True:
+								#rospy.loginfo('--> forward')
+								vel_msg.linear.x = self._linear_vel()
+							else:
+								if self.blob_lost_at_bottom == True:
+									rospy.loginfo("--> blob lost at bottom dive to last point")
+									cancle = True
+									self._calculate_last_point()
+								else: 
+									rospy.loginfo("ERROR --> BLOB LOST CANCLE MOVE TO TAG")
+									cancle = True
+									self.driving_to_tag = False
+									self.standing_on_tag = False
+									self.stop_move_to_goal_publisher.publish(False)
 						else:
-							if self.blob_lost_at_bottom == True:
-								rospy.loginfo("--> blob lost at bottom dive to last point")
-								cancle = True
-								self._calculate_last_point()
-							else: 
-								rospy.loginfo("ERROR --> BLOB LOST CANCLE MOVE TO TAG")
-								cancle = True
-								self.driving_to_tag = False
-								self.standing_on_tag = False
-								self.stop_move_to_goal_publisher.publish(False)
+							vel_msg.linear.x = 0
+							vel_msg.angular.z = 0
+							self.velocity_publisher.publish(vel_msg)
 				else:
 					cancle = True
 					self.driving_to_tag = False
