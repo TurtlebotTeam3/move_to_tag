@@ -89,14 +89,17 @@ class MoveToTag:
 		self.rate.sleep()
 
 	def _setup(self):
+		"""
+		Get map meta information.
+		"""
 		map = rospy.wait_for_message('map', OccupancyGrid)
 		self.map_info = map.info
 
 	def _goal_reached_callback(self, reached):
 		"""
-		Callback if Move_to_Goal reaches the
-		last distance and is standing on the tag
+		Reached information from move_to_goal.
 		"""
+		# if robot is driving to tag then check if goal was reached.
 		if self.driving_to_tag == True:
 			if reached:
 				self.driving_to_tag = False
@@ -112,7 +115,7 @@ class MoveToTag:
 
 	def _camera_blob_callback(self,blob):
 		"""
-		Blob callback
+		Position of detected blob in the frame.
 		"""
 		self.blob_detected = blob.blob_detected
 		self.blob_x = blob.blob_x
@@ -121,8 +124,8 @@ class MoveToTag:
 
 	def _check_if_blob_lost_bottom(self, x, y):
 		"""
-		Funktion to check if the blob is lost
-		in the lower half of the picture
+		Function to check if the blob is lost
+		in the lower half of the picture.
 		"""
 		if x != 0:
 			self.last_x = x
@@ -136,7 +139,7 @@ class MoveToTag:
 
 	def _scan_callback(self, scan):
 		"""
-		Lidar callback for Obstacle detection
+		Lidar data, check for obstacles.
 		"""
 		range_front = []
 		min_front = 0
@@ -193,20 +196,21 @@ class MoveToTag:
 				
 				if not self.obstacle:
 						current_time_ms = int(round(time.time() * 1000))
-
+						# Check if the network is working properly
 						if self.last_pose_time != None and (current_time_ms - self.last_pose_time) < 50:
+							# center the blob if not in center
 							if (self.blob_detected == True and self.blob_x < (self.center_img - self.center_tolerance)) or \
 									(self.blob_detected == True and self.blob_x > (self.center_img + self.center_tolerance)):
-									#rospy.loginfo('--> rotate')
 									vel_msg.angular.z = self._angular_vel()
 									vel_msg.linear.x = 0.015
+							# move straight
 							elif self.blob_detected == True:
-								#rospy.loginfo('--> forward')
 								vel_msg.linear.x = self._linear_vel()
 							else:
 								if self.blob_lost_at_bottom == True:
 									rospy.loginfo("--> blob lost at bottom dive to last point")
 									cancle = True
+									# Blob disapeard at the bottom of the frame, no calculate position so robot stops on tag.
 									self._calculate_last_point()
 								else: 
 									rospy.loginfo("ERROR --> BLOB LOST CANCLE MOVE TO TAG")
@@ -249,7 +253,7 @@ class MoveToTag:
 
 	def _calculate_last_point(self):
 		"""
-		Calculate the last point
+		Calculate how far robot needs to drive to be positioned on tag.
 		"""
 		next_x = round(self.pose.position.x, 4) + math.cos(self.pose_converted.yaw) * 0.175
 		next_y = round(self.pose.position.y, 4) + math.sin(self.pose_converted.yaw) * 0.175
